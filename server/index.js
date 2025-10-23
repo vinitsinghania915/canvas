@@ -42,6 +42,7 @@ const limiter = rateLimit({
 });
 
 // Middleware
+app.set("trust proxy", 1); // Trust first proxy (Render, Vercel, etc.)
 app.use(helmet());
 app.use(limiter);
 app.use(
