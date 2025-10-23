@@ -103,23 +103,33 @@ const DesignEditor: React.FC = () => {
     }
   }, [currentDesign, dispatch]);
 
-  // Auto-save functionality
+  // Auto-save functionality (silent - no toasts)
   useEffect(() => {
     if (!hasUnsavedChanges || !currentDesign) return;
 
     const autoSaveTimer = setTimeout(() => {
-      handleSave();
-    }, 2000); // Auto-save after 2 seconds of inactivity
+      handleSilentSave();
+    }, 5000); // Auto-save after 5 seconds of inactivity
 
     return () => clearTimeout(autoSaveTimer);
   }, [objects, hasUnsavedChanges]);
 
-  // Track changes for auto-save
+  // Track changes for auto-save (only when objects actually change, not on initial load)
   useEffect(() => {
-    if (currentDesign && objects.length > 0) {
-      setHasUnsavedChanges(true);
+    if (
+      currentDesign &&
+      objects.length > 0 &&
+      currentDesign.objects.length > 0
+    ) {
+      // Only mark as changed if the objects are different from the current design
+      const currentObjectsString = JSON.stringify(currentDesign.objects);
+      const newObjectsString = JSON.stringify(objects);
+
+      if (currentObjectsString !== newObjectsString) {
+        setHasUnsavedChanges(true);
+      }
     }
-  }, [objects]);
+  }, [objects, currentDesign]);
 
   const handleSave = async () => {
     if (!currentDesign || !id) return;
@@ -142,6 +152,28 @@ const DesignEditor: React.FC = () => {
       toast.error("Failed to save design");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSilentSave = async () => {
+    if (!currentDesign || !id) return;
+
+    try {
+      await dispatch(
+        updateDesign({
+          id,
+          updates: {
+            objects,
+            canvas,
+          },
+        })
+      ).unwrap();
+
+      setHasUnsavedChanges(false);
+      // No toast for silent save
+    } catch (error) {
+      console.error("Silent save error:", error);
+      // No toast for silent save errors either
     }
   };
 
@@ -328,7 +360,9 @@ const DesignEditor: React.FC = () => {
 
           <div className="panel-content">
             {activePanel === "layers" && <LayersPanel />}
-            {activePanel === "properties" && <PropertiesPanel />}
+            {activePanel === "properties" && (
+              <PropertiesPanel canvasRef={canvasRef} />
+            )}
             {activePanel === "comments" && <CommentsPanel designId={id!} />}
           </div>
         </div>

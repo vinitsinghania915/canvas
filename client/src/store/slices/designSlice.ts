@@ -6,6 +6,7 @@ interface DesignState {
   designs: Design[];
   currentDesign: Design | null;
   isLoading: boolean;
+  isUpdating: boolean;
   error: string | null;
 }
 
@@ -13,6 +14,7 @@ const initialState: DesignState = {
   designs: [],
   currentDesign: null,
   isLoading: false,
+  isUpdating: false,
   error: null,
 };
 
@@ -171,11 +173,11 @@ const designSlice = createSlice({
       })
       // Update design
       .addCase(updateDesign.pending, (state) => {
-        state.isLoading = true;
+        state.isUpdating = true;
         state.error = null;
       })
       .addCase(updateDesign.fulfilled, (state, action) => {
-        state.isLoading = false;
+        state.isUpdating = false;
         state.currentDesign = action.payload.design;
         const index = state.designs.findIndex(
           (design) => design._id === action.payload.design._id
@@ -185,7 +187,7 @@ const designSlice = createSlice({
         }
       })
       .addCase(updateDesign.rejected, (state, action) => {
-        state.isLoading = false;
+        state.isUpdating = false;
         state.error =
           (action.payload as ApiError)?.message || "Failed to update design";
       })

@@ -29,6 +29,7 @@ export interface CanvasRef {
   addImage: (imageUrl: string) => void;
   exportAsPNG: () => void;
   deleteSelected: () => void;
+  updateFabricObject: (objectId: string, updates: Partial<CanvasRect>) => void;
 }
 
 const Canvas = forwardRef<CanvasRef, CanvasProps>(
@@ -152,18 +153,18 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
       );
     }, [canvas, fabricCanvas]);
 
-    // Load objects into Fabric.js canvas ONCE when design loads
+    // Load objects into Fabric.js canvas when design loads or objects change
     useEffect(() => {
-      if (
-        !fabricCanvas ||
-        !fabricCanvas.lowerCanvasEl ||
-        !objects.length ||
-        hasLoadedObjectsRef.current
-      )
+      if (!fabricCanvas || !fabricCanvas.lowerCanvasEl || !objects.length)
         return;
 
+      // Only load objects initially, then sync changes
+      const isInitialLoad = !hasLoadedObjectsRef.current;
+      if (isInitialLoad) {
+        hasLoadedObjectsRef.current = true;
+      }
+
       isUpdatingRef.current = true;
-      hasLoadedObjectsRef.current = true;
 
       // Convert CanvasObjects back to Fabric.js objects
       const fabricObjects = objects
@@ -283,9 +284,17 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
       if (!fabricCanvas) return;
 
       const handleObjectModified = (event?: any) => {
-        if (isUpdatingRef.current) return;
+        if (isUpdatingRef.current) {
+          console.log("handleObjectModified skipped - isUpdatingRef is true");
+          return;
+        }
 
+        console.log("handleObjectModified called");
         const fabricObjects = fabricCanvas.getObjects();
+        console.log(
+          "fabricObjects:",
+          fabricObjects.map((o: any) => ({ id: o.id, type: o.type }))
+        );
         const objects = fabricObjects.map((obj: any) => {
           const baseObject = {
             id: obj.id || `obj_${Date.now()}`,
@@ -403,54 +412,54 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
     }, [fabricCanvas, onCanvasClick]);
 
     // Handle keyboard events (Delete key)
-    useEffect(() => {
-      const handleKeyDown = (event: KeyboardEvent) => {
-        // Only handle delete if canvas is focused or if it's a global delete
-        if (event.key === "Delete" || event.key === "Backspace") {
-          if (!fabricCanvas) return;
+    // useEffect(() => {
+    //   const handleKeyDown = (event: KeyboardEvent) => {
+    //     // Only handle delete if canvas is focused or if it's a global delete
+    //     if (event.key === "Delete" || event.key === "Backspace") {
+    //       if (!fabricCanvas) return;
 
-          // Check if we're currently editing text
-          const activeObject = fabricCanvas.getActiveObject();
-          const isEditingText =
-            activeObject &&
-            activeObject.isEditing &&
-            activeObject.type === "i-text";
+    //       // Check if we're currently editing text
+    //       const activeObject = fabricCanvas.getActiveObject();
+    //       const isEditingText =
+    //         activeObject &&
+    //         activeObject.isEditing &&
+    //         activeObject.type === "i-text";
 
-          // If we're editing text, don't handle the delete key globally
-          if (isEditingText) {
-            return;
-          }
+    //       // If we're editing text, don't handle the delete key globally
+    //       if (isEditingText) {
+    //         return;
+    //       }
 
-          const activeObjects = fabricCanvas.getActiveObjects();
-          if (activeObjects.length > 0) {
-            event.preventDefault();
+    //       const activeObjects = fabricCanvas.getActiveObjects();
+    //       if (activeObjects.length > 0) {
+    //         event.preventDefault();
 
-            // Remove selected objects from canvas
-            activeObjects.forEach((obj: any) => {
-              fabricCanvas.remove(obj);
-            });
+    //         // Remove selected objects from canvas
+    //         activeObjects.forEach((obj: any) => {
+    //           fabricCanvas.remove(obj);
+    //         });
 
-            // Clear selection
-            fabricCanvas.discardActiveObject();
-            fabricCanvas.renderAll();
+    //         // Clear selection
+    //         fabricCanvas.discardActiveObject();
+    //         fabricCanvas.renderAll();
 
-            // Show success message
-            toast.success(
-              `Deleted ${activeObjects.length} object${
-                activeObjects.length > 1 ? "s" : ""
-              }`
-            );
-          }
-        }
-      };
+    //         // Show success message
+    //         toast.success(
+    //           `Deleted ${activeObjects.length} object${
+    //             activeObjects.length > 1 ? "s" : ""
+    //           }`
+    //         );
+    //       }
+    //     }
+    //   };
 
-      // Add event listener to document for global keyboard events
-      document.addEventListener("keydown", handleKeyDown);
+    //   // Add event listener to document for global keyboard events
+    //   document.addEventListener("keydown", handleKeyDown);
 
-      return () => {
-        document.removeEventListener("keydown", handleKeyDown);
-      };
-    }, [fabricCanvas]);
+    //   return () => {
+    //     document.removeEventListener("keydown", handleKeyDown);
+    //   };
+    // }, [fabricCanvas]);
 
     // Socket.io event handlers
     useEffect(() => {
@@ -548,12 +557,14 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
         } as any);
         (rect as any).id = `rect_${Date.now()}`;
 
+        console.log("Adding rectangle with id:", (rect as any).id);
         fabricCanvas.add(rect);
         fabricCanvas.setActiveObject(rect);
         fabricCanvas.renderAll();
 
         setTimeout(() => {
           isUpdatingRef.current = false;
+          console.log("Rectangle added, isUpdatingRef reset");
         }, 100);
       },
       [fabricCanvas]
@@ -690,6 +701,39 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
       }
     }, [fabricCanvas]);
 
+    // Method to update Fabric.js object from Redux changes
+    const updateFabricObject = useCallback(
+      (objectId: string, updates: Partial<CanvasRect>) => {
+        if (!fabricCanvas) return;
+
+        const fabricObj = fabricCanvas
+          .getObjects()
+          .find((obj: any) => obj.id === objectId);
+        if (fabricObj) {
+          isUpdatingRef.current = true;
+
+          // Store current selection state
+          const activeObject = fabricCanvas.getActiveObject();
+          const wasSelected = activeObject && activeObject.id === objectId;
+
+          // Update the Fabric.js object properties
+          fabricObj.set(updates);
+          fabricCanvas.renderAll();
+
+          // Restore selection if the object was selected
+          if (wasSelected) {
+            fabricCanvas.setActiveObject(fabricObj);
+            fabricCanvas.renderAll();
+          }
+
+          setTimeout(() => {
+            isUpdatingRef.current = false;
+          }, 50);
+        }
+      },
+      [fabricCanvas]
+    );
+
     // Expose methods to parent component
     useImperativeHandle(
       ref,
@@ -700,8 +744,17 @@ const Canvas = forwardRef<CanvasRef, CanvasProps>(
         addImage,
         exportAsPNG,
         deleteSelected,
+        updateFabricObject,
       }),
-      [addText, addRectangle, addCircle, addImage, exportAsPNG, deleteSelected]
+      [
+        addText,
+        addRectangle,
+        addCircle,
+        addImage,
+        exportAsPNG,
+        deleteSelected,
+        updateFabricObject,
+      ]
     );
 
     return (

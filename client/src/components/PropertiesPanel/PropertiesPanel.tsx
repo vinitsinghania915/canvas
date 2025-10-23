@@ -1,10 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../store";
 import { updateObject } from "../../store/slices/canvasSlice";
 import ColorPicker from "../ColorPicker/ColorPicker";
+import { CanvasRef } from "../Canvas/Canvas";
 
-const PropertiesPanel: React.FC = () => {
+interface PropertiesPanelProps {
+  canvasRef?: React.RefObject<CanvasRef>;
+}
+
+const PropertiesPanel: React.FC<PropertiesPanelProps> = ({ canvasRef }) => {
   const dispatch = useDispatch();
   const { objects, selectedObjectIds } = useSelector(
     (state: RootState) => state.canvas
@@ -15,18 +20,33 @@ const PropertiesPanel: React.FC = () => {
       ? objects.find((obj) => obj.id === selectedObjectIds[0])
       : null;
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log("PropertiesPanel - selectedObjectIds:", selectedObjectIds);
+    console.log("PropertiesPanel - objects:", objects);
+    console.log("PropertiesPanel - selectedObject:", selectedObject);
+  }, [selectedObjectIds, objects, selectedObject]);
+
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [colorPickerProperty, setColorPickerProperty] = useState<string>("");
 
   const handlePropertyChange = (property: string, value: any) => {
     if (!selectedObject) return;
 
+    // Update Redux state
     dispatch(
       updateObject({
         id: selectedObject.id,
         updates: { [property]: value },
       })
     );
+
+    // Update Fabric.js object immediately
+    if (canvasRef?.current) {
+      canvasRef.current.updateFabricObject(selectedObject.id, {
+        [property]: value,
+      });
+    }
   };
 
   const openColorPicker = (property: string) => {
@@ -327,7 +347,7 @@ const PropertiesPanel: React.FC = () => {
       {/* Color Picker Modal */}
       {showColorPicker && (
         <div className="modal-overlay">
-          <div className="modal">
+          <div className="modal color-picker-modal">
             <ColorPicker
               color={
                 (selectedObject[
