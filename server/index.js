@@ -10,9 +10,12 @@ const errorHandler = require("./middleware/errorHandler");
 const setupSocketHandlers = require("./socket/socketHandler");
 
 // Import routes
-const authRoutes = require("./routes/auth");
-const designRoutes = require("./routes/designs");
-const { router: commentRoutes, setSocketIO } = require("./routes/comments");
+const authRoutes = require("./routes/authRoutes");
+const designRoutes = require("./routes/designRoutes");
+const {
+  router: commentRoutes,
+  setSocketIO,
+} = require("./routes/commentRoutes");
 
 const app = express();
 const server = createServer(app);
@@ -88,9 +91,13 @@ app.use((req, res, next) => {
 });
 
 // Routes
+console.log("Registering routes...");
 app.use("/api/auth", authRoutes);
+console.log("Auth routes registered");
 app.use("/api/designs", designRoutes);
+console.log("Design routes registered");
 app.use("/api/comments", commentRoutes);
+console.log("Comment routes registered");
 
 // Health check
 app.get("/api/health", (req, res) => {

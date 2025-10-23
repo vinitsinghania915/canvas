@@ -1,33 +1,19 @@
-const express = require("express");
-const Comment = require("../models/Comment");
 const Design = require("../models/Design");
+const Comment = require("../models/Comment");
 const User = require("../models/User");
 const {
   createCommentSchema,
   updateCommentSchema,
   addReplySchema,
 } = require("../validation/schemas");
-const auth = require("../middleware/auth");
 
-// Socket.io instance (will be set by the main server)
 let io = null;
 const setSocketIO = (socketIO) => {
   io = socketIO;
 };
 
-const router = express.Router();
-
-// Test route to verify comment routes are loaded
-router.get("/test", (req, res) => {
-  res.json({
-    code: "SUCCESS",
-    message: "Comment routes are working",
-    timestamp: new Date().toISOString(),
-  });
-});
-
 // Get comments for a design
-router.get("/design/:designId", auth, async (req, res, next) => {
+const getComments = async (req, res, next) => {
   try {
     const design = await Design.findOne({
       _id: req.params.designId,
@@ -49,7 +35,6 @@ router.get("/design/:designId", auth, async (req, res, next) => {
 
     const comments = await Comment.find({ design: req.params.designId })
       .populate("author", "username avatar")
-      .populate("mentions", "username avatar")
       .populate("replies.author", "username avatar")
       .sort({ createdAt: -1 });
 
@@ -61,10 +46,10 @@ router.get("/design/:designId", auth, async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+};
 
-// Create comment
-router.post("/design/:designId", auth, async (req, res, next) => {
+// Add comment to design
+const addComment = async (req, res, next) => {
   try {
     const validatedData = createCommentSchema.parse(req.body);
 
@@ -86,21 +71,6 @@ router.post("/design/:designId", auth, async (req, res, next) => {
       });
     }
 
-    // Validate mentions
-    if (validatedData.mentions && validatedData.mentions.length > 0) {
-      const mentionedUsers = await User.find({
-        _id: { $in: validatedData.mentions },
-      });
-
-      if (mentionedUsers.length !== validatedData.mentions.length) {
-        return res.status(400).json({
-          code: "INVALID_MENTIONS",
-          message: "Invalid mentions",
-          details: "Some mentioned users do not exist",
-        });
-      }
-    }
-
     const comment = new Comment({
       ...validatedData,
       design: req.params.designId,
@@ -109,9 +79,8 @@ router.post("/design/:designId", auth, async (req, res, next) => {
 
     await comment.save();
     await comment.populate("author", "username avatar");
-    await comment.populate("mentions", "username avatar");
 
-    // Emit socket event for real-time updates
+    // Emit real-time comment event
     if (io) {
       io.to(`design-${req.params.designId}`).emit("comment-added", {
         comment,
@@ -123,21 +92,21 @@ router.post("/design/:designId", auth, async (req, res, next) => {
 
     res.status(201).json({
       code: "SUCCESS",
-      message: "Comment created successfully",
+      message: "Comment added successfully",
       data: { comment },
     });
   } catch (error) {
     next(error);
   }
-});
+};
 
 // Update comment
-router.put("/:id", auth, async (req, res, next) => {
+const updateComment = async (req, res, next) => {
   try {
     const validatedData = updateCommentSchema.parse(req.body);
 
     const comment = await Comment.findOne({
-      _id: req.params.id,
+      _id: req.params.commentId,
       author: req.user._id,
     });
 
@@ -153,8 +122,17 @@ router.put("/:id", auth, async (req, res, next) => {
     Object.assign(comment, validatedData);
     await comment.save();
     await comment.populate("author", "username avatar");
-    await comment.populate("mentions", "username avatar");
     await comment.populate("replies.author", "username avatar");
+
+    // Emit real-time comment update event
+    if (io) {
+      io.to(`design-${comment.design}`).emit("comment-updated", {
+        comment,
+        userId: req.user._id,
+        username: req.user.username,
+        timestamp: Date.now(),
+      });
+    }
 
     res.json({
       code: "SUCCESS",
@@ -164,13 +142,13 @@ router.put("/:id", auth, async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+};
 
 // Delete comment
-router.delete("/:id", auth, async (req, res, next) => {
+const deleteComment = async (req, res, next) => {
   try {
     const comment = await Comment.findOne({
-      _id: req.params.id,
+      _id: req.params.commentId,
       author: req.user._id,
     });
 
@@ -183,60 +161,76 @@ router.delete("/:id", auth, async (req, res, next) => {
       });
     }
 
-    await Comment.findByIdAndDelete(req.params.id);
+    const designId = comment.design;
+    await Comment.findByIdAndDelete(req.params.commentId);
+
+    // Emit real-time comment delete event
+    if (io) {
+      io.to(`design-${designId}`).emit("comment-deleted", {
+        commentId: req.params.commentId,
+        userId: req.user._id,
+        username: req.user.username,
+        timestamp: Date.now(),
+      });
+    }
 
     res.json({
-      code: "SUCCESS",
+      facts: "SUCCESS",
       message: "Comment deleted successfully",
       data: {},
     });
   } catch (error) {
     next(error);
   }
-});
+};
 
 // Add reply to comment
-router.post("/:id/replies", auth, async (req, res, next) => {
+const addReply = async (req, res, next) => {
   try {
     const validatedData = addReplySchema.parse(req.body);
 
-    const comment = await Comment.findById(req.params.id);
+    const comment = await Comment.findOne({
+      _id: req.params.commentId,
+      design: {
+        $in: await Design.find({
+          $or: [
+            { owner: req.user._id },
+            { "collaborators.user": req.user._id },
+            { isPublic: true },
+          ],
+        }).distinct("_id"),
+      },
+    });
 
     if (!comment) {
       return res.status(404).json({
         code: "COMMENT_NOT_FOUND",
         message: "Comment not found",
-        details: "The requested comment does not exist",
+        details:
+          "The requested comment does not exist or you do not have access to it",
       });
     }
 
-    // Check if user has access to the design
-    const design = await Design.findOne({
-      _id: comment.design,
-      $or: [
-        { owner: req.user._id },
-        { "collaborators.user": req.user._id },
-        { isPublic: true },
-      ],
-    });
-
-    if (!design) {
-      return res.status(403).json({
-        code: "ACCESS_DENIED",
-        message: "Access denied",
-        details: "You do not have access to this design",
-      });
-    }
-
-    comment.replies.push({
+    const reply = {
+      ...validatedData,
       author: req.user._id,
-      content: validatedData.content,
-    });
+      createdAt: new Date(),
+    };
 
+    comment.replies.push(reply);
     await comment.save();
     await comment.populate("author", "username avatar");
-    await comment.populate("mentions", "username avatar");
     await comment.populate("replies.author", "username avatar");
+
+    // Emit real-time comment update event
+    if (io) {
+      io.to(`design-${comment.design}`).emit("comment-updated", {
+        comment,
+        userId: req.user._id,
+        username: req.user.username,
+        timestamp: Date.now(),
+      });
+    }
 
     res.json({
       code: "SUCCESS",
@@ -246,6 +240,59 @@ router.post("/:id/replies", auth, async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+};
 
-module.exports = { router, setSocketIO };
+// Resolve comment
+const resolveComment = async (req, res, next) => {
+  try {
+    const comment = await Comment.findOne({
+      _id: req.params.commentId,
+      author: req.user._id,
+    });
+
+    if (!comment) {
+      return res.status(404).json({
+        code: "COMMENT_NOT_FOUND",
+        message: "Comment not found",
+        details:
+          "The requested comment does not exist or you do not have permission to resolve it",
+      });
+    }
+
+    comment.isResolved = !comment.isResolved;
+    await comment.save();
+    await comment.populate("author", "username avatar");
+    await comment.populate("replies.author", "username avatar");
+
+    // Emit real-time comment update event
+    if (io) {
+      io.to(`design-${comment.design}`).emit("comment-updated", {
+        comment,
+        userId: req.user._id,
+        username: req.user.username,
+        timestamp: Date.now(),
+      });
+    }
+
+    res.json({
+      code: "SUCCESS",
+      message: `Comment ${
+        comment.isResolved ? "resolved" : "unresolved"
+      } successfully`,
+      data: { comment },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = {
+  setSocketIO,
+  testComment,
+  getComments,
+  addComment,
+  updateComment,
+  deleteComment,
+  addReply,
+  resolveComment,
+};

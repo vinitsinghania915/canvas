@@ -1,24 +1,11 @@
-const express = require("express");
 const Design = require("../models/Design");
 const {
   createDesignSchema,
   updateDesignSchema,
 } = require("../validation/schemas");
-const auth = require("../middleware/auth");
-
-const router = express.Router();
-
-// Test route to verify design routes are loaded
-router.get("/test", (req, res) => {
-  res.json({
-    code: "SUCCESS",
-    message: "Design routes are working",
-    timestamp: new Date().toISOString(),
-  });
-});
 
 // Get all designs for current user
-router.get("/", auth, async (req, res, next) => {
+const getDesigns = async (req, res, next) => {
   try {
     const designs = await Design.find({
       $or: [{ owner: req.user._id }, { "collaborators.user": req.user._id }],
@@ -35,10 +22,10 @@ router.get("/", auth, async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+};
 
 // Create new design
-router.post("/", auth, async (req, res, next) => {
+const createDesign = async (req, res, next) => {
   try {
     const validatedData = createDesignSchema.parse(req.body);
 
@@ -58,10 +45,10 @@ router.post("/", auth, async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+};
 
 // Get single design
-router.get("/:id", auth, async (req, res, next) => {
+const getDesign = async (req, res, next) => {
   try {
     const design = await Design.findOne({
       _id: req.params.id,
@@ -91,10 +78,10 @@ router.get("/:id", auth, async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+};
 
 // Update design
-router.put("/:id", auth, async (req, res, next) => {
+const updateDesign = async (req, res, next) => {
   try {
     const validatedData = updateDesignSchema.parse(req.body);
 
@@ -131,10 +118,10 @@ router.put("/:id", auth, async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+};
 
 // Delete design
-router.delete("/:id", auth, async (req, res, next) => {
+const deleteDesign = async (req, res, next) => {
   try {
     const design = await Design.findOne({
       _id: req.params.id,
@@ -160,10 +147,10 @@ router.delete("/:id", auth, async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+};
 
 // Add collaborator
-router.post("/:id/collaborators", auth, async (req, res, next) => {
+const addCollaborator = async (req, res, next) => {
   try {
     const { userId, role = "editor" } = req.body;
 
@@ -206,10 +193,10 @@ router.post("/:id/collaborators", auth, async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+};
 
 // Remove collaborator
-router.delete("/:id/collaborators/:userId", auth, async (req, res, next) => {
+const removeCollaborator = async (req, res, next) => {
   try {
     const design = await Design.findOne({
       _id: req.params.id,
@@ -240,6 +227,14 @@ router.delete("/:id/collaborators/:userId", auth, async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+};
 
-module.exports = router;
+module.exports = {
+  getDesigns,
+  createDesign,
+  getDesign,
+  updateDesign,
+  deleteDesign,
+  addCollaborator,
+  removeCollaborator,
+};

@@ -1,22 +1,9 @@
-const express = require("express");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const { registerSchema, loginSchema } = require("../validation/schemas");
-const auth = require("../middleware/auth");
 
-const router = express.Router();
-
-// Test route to verify auth routes are loaded
-router.get("/test", (req, res) => {
-  res.json({
-    code: "SUCCESS",
-    message: "Auth routes are working",
-    timestamp: new Date().toISOString(),
-  });
-});
-
-// Register
-router.post("/register", async (req, res, next) => {
+// Register user
+const register = async (req, res, next) => {
   try {
     const validatedData = registerSchema.parse(req.body);
 
@@ -60,15 +47,14 @@ router.post("/register", async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+};
 
-// Login
-router.post("/login", async (req, res, next) => {
+// Login user
+const login = async (req, res, next) => {
   try {
     const validatedData = loginSchema.parse(req.body);
 
     const user = await User.findOne({ email: validatedData.email });
-    console.log(user);
     if (!user || !(await user.comparePassword(validatedData.password))) {
       return res.status(401).json({
         code: "INVALID_CREDENTIALS",
@@ -99,10 +85,10 @@ router.post("/login", async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
+};
 
 // Get current user
-router.get("/me", auth, async (req, res) => {
+const getCurrentUser = async (req, res) => {
   res.json({
     code: "SUCCESS",
     message: "User retrieved successfully",
@@ -110,6 +96,11 @@ router.get("/me", auth, async (req, res) => {
       user: req.user,
     },
   });
-});
+};
 
-module.exports = router;
+module.exports = {
+  testAuth,
+  register,
+  login,
+  getCurrentUser,
+};
