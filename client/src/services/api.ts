@@ -3,7 +3,8 @@ import { ApiResponse, User, Design, Comment } from "../types";
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "http://localhost:5001/api",
+  baseURL:
+    process.env.REACT_APP_API_URL || "https://canvas-lv3z.onrender.com/api",
   headers: {
     "Content-Type": "application/json",
   },

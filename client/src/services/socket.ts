@@ -19,12 +19,15 @@ class SocketService {
       return this.socket;
     }
 
-    this.socket = io(process.env.REACT_APP_API_URL || "http://localhost:5001", {
-      auth: {
-        token,
-      },
-      transports: ["websocket"],
-    }) as CustomSocket;
+    this.socket = io(
+      process.env.REACT_APP_API_URL || "https://canvas-lv3z.onrender.com/api",
+      {
+        auth: {
+          token,
+        },
+        transports: ["websocket"],
+      }
+    ) as CustomSocket;
 
     return this.socket;
   }
