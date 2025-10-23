@@ -71,6 +71,7 @@ app.use(
         process.env.CLIENT_URL || "http://localhost:3000",
         "http://localhost:3000",
         "https://localhost:3000",
+        "https://canvas-ve3k.vercel.app",
       ];
 
       if (allowedOrigins.includes(origin)) {
