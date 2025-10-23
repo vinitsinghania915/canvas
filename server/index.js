@@ -36,15 +36,15 @@ setInterval(() => {
 }, 30000); // Check every 30 seconds
 
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-});
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutes
+//   max: 100, // limit each IP to 100 requests per windowMs
+// });
 
 // Middleware
 app.set("trust proxy", 1); // Trust first proxy (Render, Vercel, etc.)
 app.use(helmet());
-app.use(limiter);
+// app.use(limiter);
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:3000",
