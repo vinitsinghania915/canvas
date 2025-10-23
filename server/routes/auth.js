@@ -6,6 +6,15 @@ const auth = require("../middleware/auth");
 
 const router = express.Router();
 
+// Test route to verify auth routes are loaded
+router.get("/test", (req, res) => {
+  res.json({
+    code: "SUCCESS",
+    message: "Auth routes are working",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Register
 router.post("/register", async (req, res, next) => {
   try {

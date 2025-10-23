@@ -17,6 +17,15 @@ const setSocketIO = (socketIO) => {
 
 const router = express.Router();
 
+// Test route to verify comment routes are loaded
+router.get("/test", (req, res) => {
+  res.json({
+    code: "SUCCESS",
+    message: "Comment routes are working",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Get comments for a design
 router.get("/design/:designId", auth, async (req, res, next) => {
   try {

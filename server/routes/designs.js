@@ -8,6 +8,15 @@ const auth = require("../middleware/auth");
 
 const router = express.Router();
 
+// Test route to verify design routes are loaded
+router.get("/test", (req, res) => {
+  res.json({
+    code: "SUCCESS",
+    message: "Design routes are working",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Get all designs for current user
 router.get("/", auth, async (req, res, next) => {
   try {
