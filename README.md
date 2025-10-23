@@ -732,44 +732,6 @@ This project is licensed under the MIT License.
   - _Why_: Performance overhead, not essential for MVP
   - _Future_: Can add with cursor tracking
 
-#### **Advanced UI Features**
-
-- **Rulers and Guides**: Design grid and measurement tools
-
-  - _Why_: Nice-to-have, not core functionality
-  - _Future_: Can add with canvas overlay
-
-- **Keyboard Shortcuts**: Advanced shortcut system
-
-  - _Why_: Basic shortcuts sufficient for MVP
-  - _Future_: Can add comprehensive shortcut system
-
-- **Dark Mode**: Theme switching
-  - _Why_: Not essential for core functionality
-  - _Future_: Easy to add with CSS variables
-
-#### **Performance Optimizations**
-
-- **Virtual Scrolling**: For large design lists
-
-  - _Why_: Not needed for typical use cases
-  - _Future_: Can add when scaling to thousands of designs
-
-- **Canvas Caching**: Offscreen canvas rendering
-  - _Why_: Premature optimization for MVP
-  - _Future_: Can add for performance improvements
-
-#### **Advanced Export Features**
-
-- **Multiple Formats**: PDF, SVG, JPG export
-
-  - _Why_: PNG covers most use cases
-  - _Future_: Can add with format conversion libraries
-
-- **Batch Export**: Export multiple designs
-  - _Why_: Not essential for individual users
-  - _Future_: Can add for power users
-
 #### **Authentication & Security**
 
 - **OAuth Integration**: Google, GitHub login
@@ -824,12 +786,6 @@ This project is licensed under the MIT License.
 4. **Maintainability**: Simpler codebase easier to maintain and debug
 5. **Performance**: Fewer features = better performance and reliability
 
-#### **Future Roadmap:**
-
-- **Phase 2**: Advanced shapes, image filters, dark mode
-- **Phase 3**: User roles, version history, advanced export
-- **Phase 4**: Templates, advanced search, performance optimizations
-- **Phase 5**: Voice chat, advanced collaboration features
 
 #### **Extension Points:**
 
