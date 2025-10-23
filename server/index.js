@@ -9,6 +9,13 @@ const connectDB = require("./config/database");
 const errorHandler = require("./middleware/errorHandler");
 const setupSocketHandlers = require("./socket/socketHandler");
 
+const auth = require("../middleware/auth");
+const {
+  register,
+  login,
+  getCurrentUser,
+} = require("../controllers/authController");
+
 // Import routes
 const authRoutes = require("./routes/authRoutes");
 const designRoutes = require("./routes/designRoutes");
@@ -98,6 +105,10 @@ app.use("/api/designs", designRoutes);
 console.log("Design routes registered");
 app.use("/api/comments", commentRoutes);
 console.log("Comment routes registered");
+
+app.post("/api/auth/register", register);
+app.post("/api/auth/login", login);
+app.get("/api/auth/me", auth, getCurrentUser);
 
 // Health check
 app.get("/api/health", (req, res) => {
