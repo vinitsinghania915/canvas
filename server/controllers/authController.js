@@ -99,7 +99,6 @@ const getCurrentUser = async (req, res) => {
 };
 
 module.exports = {
-  testAuth,
   register,
   login,
   getCurrentUser,

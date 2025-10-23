@@ -288,7 +288,6 @@ const resolveComment = async (req, res, next) => {
 
 module.exports = {
   setSocketIO,
-  testComment,
   getComments,
   addComment,
   updateComment,
