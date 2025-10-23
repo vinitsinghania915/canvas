@@ -32,6 +32,7 @@ const io = new Server(server, {
       process.env.CLIENT_URL || "http://localhost:3000",
       "http://localhost:3000",
       "https://localhost:3000",
+      "https://canvas-ve3k.vercel.app",
     ],
     methods: ["GET", "POST"],
     credentials: true,
