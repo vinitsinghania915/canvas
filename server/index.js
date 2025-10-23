@@ -9,12 +9,12 @@ const connectDB = require("./config/database");
 const errorHandler = require("./middleware/errorHandler");
 const setupSocketHandlers = require("./socket/socketHandler");
 
-const auth = require("../middleware/auth");
+const auth = require("./middleware/auth");
 const {
   register,
   login,
   getCurrentUser,
-} = require("../controllers/authController");
+} = require("./controllers/authController");
 
 // Import routes
 const authRoutes = require("./routes/authRoutes");
