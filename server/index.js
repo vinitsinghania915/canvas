@@ -81,13 +81,13 @@ setSocketIO(io);
 app.use(errorHandler);
 
 // 404 handler
-app.use("*", (req, res) => {
-  res.status(404).json({
-    code: "NOT_FOUND",
-    message: "Route not found",
-    details: `The requested route ${req.originalUrl} does not exist`,
-  });
-});
+// app.use("*", (req, res) => {
+//   res.status(404).json({
+//     code: "NOT_FOUND",
+//     message: "Route not found",
+//     details: `The requested route ${req.originalUrl} does not exist`,
+//   });
+// });
 
 const PORT = process.env.PORT;
 
