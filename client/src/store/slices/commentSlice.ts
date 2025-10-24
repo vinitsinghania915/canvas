@@ -168,11 +168,19 @@ const commentSlice = createSlice({
       })
       // Add reply
       .addCase(addReply.fulfilled, (state, action) => {
-        const index = state.comments.findIndex(
-          (comment) => comment._id === action.payload.comment._id
-        );
-        if (index !== -1) {
-          state.comments[index] = action.payload.comment;
+        // Handle different response structures for addReply
+        const updatedComment =
+          action.payload.comment ||
+          action.payload.data?.comment ||
+          action.payload;
+
+        if (updatedComment && updatedComment._id) {
+          const index = state.comments.findIndex(
+            (comment) => comment._id === updatedComment._id
+          );
+          if (index !== -1) {
+            state.comments[index] = updatedComment;
+          }
         }
       });
   },

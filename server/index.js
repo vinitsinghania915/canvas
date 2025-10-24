@@ -108,10 +108,6 @@ console.log("Design routes registered");
 app.use("/api/comments", commentRoutes);
 console.log("Comment routes registered");
 
-app.post("/api/auth/register", register);
-app.post("/api/auth/login", login);
-app.get("/api/auth/me", auth, getCurrentUser);
-
 // Health check
 app.get("/api/health", (req, res) => {
   res.json({
